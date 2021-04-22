@@ -1,11 +1,35 @@
 import numpy as np
 import copy
 import random
+import os as os
+import sys as sys
 
 #safe location
-result_path = "/home/lary/workwork/PycharmProjects/test00/brojekt_biot/results/result.sto"
-result = open(result_path,"w")
 
+curr_path = os.getcwd()
+#input
+in_script = sys.argv[0]
+in_file = curr_path +"/"+ sys.argv[1]# python3 [msa.py,file.sto]
+
+with open(in_file,"r") as datei:
+    test = datei.readlines()
+    test_namen=[x.replace("\n","").split()[0] for x in test if x.startswith("#")==False and x.startswith("/")==False]
+    test = [x.replace("\n","").split()[1] for x in test if x.startswith("#")==False and x.startswith("/")==False]
+    datei.close()
+
+print("test: ",test)
+print("input: ", in_file)
+#output
+result_path = curr_path+"/results/result.sto"
+result = open(result_path,"w")
+result.write(f"#start\n{in_file}\n")
+result.write(f"#seq_anno: {test_namen}\n")
+result.write(f"#seq: {test}\n")
+
+
+
+
+#print("file: ", __file__)aktuelles file pfad
 global gap_cost
 gap_cost = -4
 global variable_gap_cost
@@ -236,24 +260,24 @@ def msa(seq_list):#["","","",]
 #test = msa(test)
 
 #130 pfam
-pfad = "/home/lary/Documents/Studium/4.Semester/problemorientierte_programmierung/beleg2021/PF00545_seed_130_seq.fasta"
-with open(pfad,"r") as datei:
-    test = datei.readlines()
+#pfad = "/home/lary/Documents/Studium/4.Semester/problemorientierte_programmierung/beleg2021/PF00545_seed_130_seq.fasta"
+#with open(pfad,"r") as datei:
+#    test = datei.readlines()
 
 #muell
-test_name,test_seq = [],[]
-test_vergleich = [x.replace(".","-").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
-test_seq = [x.replace(".","").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
-test_name = [x.replace(".","").replace("\n","").replace("/","").split()[0] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
+#test_name,test_seq = [],[]
+#test_vergleich = [x.replace(".","-").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
+#test_seq = [x.replace(".","").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
+#test_name = [x.replace(".","").replace("\n","").replace("/","").split()[0] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
 
 
-print("names: ", len(test_name),test_name)
-print("seq: ",len(test_seq),test_seq)
-print(set([len(x) for x in test_seq]))
-print("vergleich: ", test_vergleich)
-print(set([len(x) for x in test_vergleich]))
+#print("names: ", len(test_name),test_name)
+#print("seq: ",len(test_seq),test_seq)
+#print(set([len(x) for x in test_seq]))
+#print("vergleich: ", test_vergleich)
+#print(set([len(x) for x in test_vergleich]))
 
-test = test_seq
+#test = test_seq
 test = msa(test)
 
 
@@ -264,12 +288,10 @@ test = msa(test)
 """
 to do :
     -in blosum62 die gap costen variable machen
-    zusammenfügen multipler aligments verstehen...
-    -star aligment wie tree joining
     refacctor code -> class, executable 
-    redumdante durchläufe entfernen
     output zwischenschritte in file 
     track time
+    np.where(matrix==matrix.max/min()) -> bessere variante coor von val zu finden
 """
 
 result.close()
