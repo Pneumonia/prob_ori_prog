@@ -18,9 +18,10 @@ with open(input_file_pfad, "r") as datei:
     test = datei.readlines()
     test_anno = [x.replace("\n","") for x in test if x.startswith("#")]
     test_namen=[x.replace("\n","").split()[0] for x in test if x.startswith("#")==False and x.startswith("/")==False]
-    test = [x.replace("\n","").split()[1] for x in test if x.startswith("#")==False and x.startswith("/")==False]
+    test = [x.replace("\n","").replace(".","").split()[1] for x in test if x.startswith("#")==False and x.startswith("/")==False]
     test_namen = dict(zip(test,test_namen))
     datei.close()
+
 
 global head
 head = [input_file,input_file_pfad,test_anno,test_namen,test]
@@ -29,7 +30,7 @@ head = [input_file,input_file_pfad,test_anno,test_namen,test]
 check_path = curr_path+"/results/" + "msa_check_" + input_file
 check = open(check_path,"w")
 
-[check.write(f"#{x}\n") for x in head]
+[check.write(f"#={x}\n") for x in head]
 
 
 
@@ -210,20 +211,21 @@ def msa(seq_list,head=head):#["","","",]
     #[result.write(f"#{x}\n") for x in score_matrix]
     head+=[f"guide_tree: {guide_tree}"]
 
-    [check.write(f"#{x}\n") for x in head]
+    [check.write(f"#={x}\n") for x in head]
 
     #msa baum methode----------------------------------------------------------
     #seq werden anhand guide tree aligniert, bei aligments mehrerer seq wird durschnitt der jeweiligen pos als weert genommen
     tree_list = copy.deepcopy(seq_list)
 
     tree_msa = open(os.getcwd() + "/results/tree_msa_"+ input_file,"w")
-    [tree_msa.write(f"#{x}\n") for x in head]
+    tree_msa.write("# STOCKHOLM 1.0\n")
+    #[tree_msa.write(f"#={x}\n") for x in head]
 
     for pos in guide_tree:
         matrix = path_finder_function(tree_list[pos[0]], tree_list[pos[1]])
         seq = sequence_function(tree_list[pos[0]],tree_list[pos[1]],matrix)
         tree_list[pos[0]] = seq
-    tree_msa.write("\n#tree_aligment\n#laengen_check: "+str(set([len(x) for x in tree_list[0]]))+"\n#result:\n")
+    #tree_msa.write("#=tree_aligment\n#=laengen_check: "+str(set([len(x) for x in tree_list[0]]))+"\n#=result:\n")
     [tree_msa.write(f"{annotion_find(w)}\t{w}\n") for w in tree_list[0]]
     tree_msa.write("//\n")
     tree_msa.close()
@@ -235,7 +237,8 @@ def msa(seq_list,head=head):#["","","",]
     #der aenlichsten seq aus alig2 aligniert
     #luecken werden nach vorblid des musteraligment in andere aligmen eingefuegt
     tree_star_msa = open(os.getcwd() + "/results/tree_star_msa_"+ input_file,"w")
-    [tree_star_msa.write(f"#{x}\n") for x in head]
+    tree_star_msa.write("# STOCKHOLM 1.0\n")
+    #[tree_star_msa.write(f"#={x}\n") for x in head]
 
     star_list = copy.deepcopy(seq_list)
     for pos in guide_tree:
@@ -245,7 +248,7 @@ def msa(seq_list,head=head):#["","","",]
         matrix = path_finder_function([star_list[pos[0]][star_guide[0]]], [star_list[pos[1]][star_guide[1]]])
         seq = sequence_function(star_list[pos[0]],star_list[pos[1]],matrix)
         star_list[pos[0]] = seq
-    tree_star_msa.write("\n#ergebniss_star-tree_aligment\n#laengen_check: "+str(set([len(x) for x in star_list[0]]))+"\n#result:\n")
+    #tree_star_msa.write("#=ergebniss_star-tree_aligment\n#=laengen_check: "+str(set([len(x) for x in star_list[0]]))+"\n#=result:\n")
     [tree_star_msa.write(f"{annotion_find(w)}\t{w}\n") for w in star_list[0]]
     tree_star_msa.write("//\n")
     tree_star_msa.close()
@@ -257,7 +260,8 @@ def msa(seq_list,head=head):#["","","",]
     star2_list = copy.deepcopy(seq_list)
 
     tree_star_msa2 = open(os.getcwd() + "/results/tree_star_msa2_"+ input_file,"w")
-    [tree_star_msa2.write(f"#{x}\n") for x in head]
+    tree_star_msa2.write("# STOCKHOLM 1.0\n")
+    #[tree_star_msa2.write(f"#={x}\n") for x in head]
     for pos in guide_tree:
         seq_safe = []
         if len(star2_list[pos[0]])<len(star2_list[pos[1]]):
@@ -271,7 +275,7 @@ def msa(seq_list,head=head):#["","","",]
             star2_list[pos[0]] = sequence_function(star2_list[pos[0]],[],matrix)
             del star2_list[pos[1]][star_guide[1]]
         star2_list[pos[0]] += seq_safe
-    tree_star_msa2.write("\n#ergebniss_star-tree2_aligment\n#laengen_check: "+str(set([len(x) for x in star2_list[0]]))+"\nresult:\n")
+    #tree_star_msa2.write("#=ergebniss_star-tree2_aligment\n#=laengen_check: "+str(set([len(x) for x in star2_list[0]]))+"\n#=result:\n")
     [tree_star_msa2.write(f"{annotion_find(w)}\t{w}\n") for w in star2_list[0]]
     tree_star_msa2.write("//\n")
     tree_star_msa2.close()

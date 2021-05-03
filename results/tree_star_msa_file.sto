@@ -1,14 +1,4 @@
-#file.sto
-#/home/lary/workwork/PycharmProjects/test00/brojekt_biot/file.sto
-#['#test for input', '#anotation', '#anotation']
-#{'cccccc': 'seq1', 'abaaaa': 'seq2', 'baaaba': 'seq3', 'abaabb': 'seq4', 'abbbbb': 'seq5', 'abbbba': 'seq6', 'aabbaa': 'seq7', 'ababab': 'seq8'}
-#['cccccc', 'abaaaa', 'baaaba', 'abaabb', 'abbbbb', 'abbbba', 'aabbaa', 'ababab']
-#seq_list: [['cccccc'], ['abaaaa'], ['baaaba'], ['abaabb'], ['abbbbb'], ['abbbba'], ['aabbaa'], ['ababab']]
-#guide_tree: [[4, 5], [1, 2], [3, 7], [1, 3], [4, 6], [1, 4], [0, 1]]
-
-#ergebniss_star-tree_aligment
-#laengen_check: {7}
-#result:
+# STOCKHOLM 1.0
 seq1	ccccc-c
 seq2	abaaa-a
 seq3	-baaaba
