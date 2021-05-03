@@ -1,44 +1,11 @@
 import numpy as np
 import copy
 import random
-import os as os
-import sys as sys
 
 #safe location
+result_path = "/home/lary/workwork/PycharmProjects/test00/brojekt_biot/results/result.sto"
+result = open(result_path,"w")
 
-curr_path = os.getcwd()
-#input anpassen auf variablen input
-in_script = sys.argv[0]
-
-global input_file
-input_file = sys.argv[1]
-input_file_pfad = curr_path + "/" + input_file # python3 [msa.py,file.sto]
-
-with open(input_file_pfad, "r") as datei:
-    test = datei.readlines()
-    test_anno = [x.replace("\n","") for x in test if x.startswith("#")]
-    test_namen=[x.replace("\n","").split()[0] for x in test if x.startswith("#")==False and x.startswith("/")==False]
-    test = [x.replace("\n","").split()[1] for x in test if x.startswith("#")==False and x.startswith("/")==False]
-    test_namen = dict(zip(test,test_namen))
-    datei.close()
-
-global head
-head = [input_file,input_file_pfad,test_anno,test_namen,test]
-
-#check
-check_path = curr_path+"/results/" + "msa_check_" + input_file
-check = open(check_path,"w")
-
-[check.write(f"#{x}\n") for x in head]
-
-
-
-
-
-
-
-#print("file: ", __file__)aktuelles file pfad
-#gap cost in bh62 matrix
 global gap_cost
 gap_cost = -4
 global variable_gap_cost
@@ -82,7 +49,8 @@ def path_finder_function(align1, align2): #["str1","str2"],["str1","str2"]
     if str(align1)+str(align2) in align_dic:
         return align_dic[str(align1)+str(align2)]
 
-    #gap und multiple gap cost in eine funktion
+
+    #gap und multiple gap cost
     def gap_cost_function(score_matrix):
         x_axe = [value + gap_cost + variable_gap_cost*(y-i-1) for i,value in enumerate(score_matrix[x][:y])]
         y_axe = [value + gap_cost + variable_gap_cost*(x-i-1) for i,value in enumerate(np.take(score_matrix,y,axis=1)[:x])]
@@ -142,14 +110,12 @@ def path_finder_function(align1, align2): #["str1","str2"],["str1","str2"]
     #return score_matrix #2d numpy array
     position = traceback_function(move_matrix)
     align_dic[str(align1)+str(align2)] = position
-    #check
-    check.write(f"#align1: {align1}, align2: {align2} : {position}\n")
     return position
 
 #min score, luecken sind zaelen als +1
 def score_function(seq1,seq2):
     score = sum([0 if x == y and x !="-" else 1 for x,y in zip(seq1,seq2)])
-    check.write(f"#seq1,seq2: {seq1} : {seq2}, score: {score}\n")
+    #print("seq1,seq2: {seq1} : {seq2}, score: {score}".format(seq1=seq1,seq2=seq2,score=score))
     return score
 #--------------------------------------------------------------------------------------------------------------
 #macht aus pos seq mit luecen
@@ -158,7 +124,7 @@ def sequence_function(seq1,seq2,pfad):#-2 weil shape verwendet und index #[[""],
     #pfad in enum ist 1 kürzer am anfang als der der die last pos trackt, -2 bei pos da shape bei (1,1) anfängt
     new_seq1 = ["".join(["-" if pfad[::-1][i][0] == pos[0] else s1[pos[0]-2] for i,pos in enumerate(pfad[-2::-1])]) for s1 in seq1]
     new_seq2 = ["".join(["-" if pfad[::-1][i][1] == pos[1] else s2[pos[1]-2] for i,pos in enumerate(pfad[-2::-1])]) for s2 in seq2]
-    check.write(f"#seq1,seq2: {seq1} {seq2}, pfad: {pfad}, aligment: {new_seq1} {new_seq2}\n")
+    #print("ende;  seq1,seq2,aligment: " , seq1," ",seq2, " ",new_seq1+new_seq2)
     return new_seq1 + new_seq2
 #-------------------------------------------------------------------------------------------------------------------------
 #erzeugt guide tree
@@ -194,49 +160,30 @@ def score_matrix_function(seq_list):
     score_list = np.array(score_list)
     return score_list
 #----------------------------------------------------------------------------------------------------------------
-#findet richtige seq fuer output
-def annotion_find(seq,anotations=test_namen):
-    return anotations[seq.replace("-","").replace(".","")]
-
 #bald main
-def msa(seq_list,head=head):#["","","",]
+def msa(seq_list):#["","","",]
     seq_list = [[x] for x in seq_list] #[[""],[""],[""]
     score_matrix = score_matrix_function(seq_list)
     guide_tree = guide_tree_function(score_matrix)
-
-    head+= [f"seq_list: {seq_list}"]
-    #fehlerhaft
-    #head+= [f"score_matrix: {score_matrix}"]
-    #[result.write(f"#{x}\n") for x in score_matrix]
-    head+=[f"guide_tree: {guide_tree}"]
-
-    [check.write(f"#{x}\n") for x in head]
-
+    result.write("\n#=guide_tree: "+str(guide_tree))
     #msa baum methode----------------------------------------------------------
     #seq werden anhand guide tree aligniert, bei aligments mehrerer seq wird durschnitt der jeweiligen pos als weert genommen
     tree_list = copy.deepcopy(seq_list)
-
-    tree_msa = open(os.getcwd() + "/results/tree_msa_"+ input_file,"w")
-    [tree_msa.write(f"#{x}\n") for x in head]
-
     for pos in guide_tree:
         matrix = path_finder_function(tree_list[pos[0]], tree_list[pos[1]])
         seq = sequence_function(tree_list[pos[0]],tree_list[pos[1]],matrix)
         tree_list[pos[0]] = seq
-    tree_msa.write("\n#tree_aligment\n#laengen_check: "+str(set([len(x) for x in tree_list[0]]))+"\n#result:\n")
-    [tree_msa.write(f"{annotion_find(w)}\t{w}\n") for w in tree_list[0]]
-    tree_msa.write("//\n")
-    tree_msa.close()
-    [check.write(f"{w}\n") for w in tree_list[0]]
-    check.write("//\n")
+    print("end baum methode: ",tree_list[0])
+    print(set([len(x) for x in tree_list[0]]))
+    result.write("\n#ergebniss_tree_aligment\n#laengen: "+str(set([len(x) for x in tree_list[0]]))+"\n #ergebniss:\n")
+    for w in tree_list[0]:
+        result.write(w+"\n")
+    result.write("\n//\n")
     #tree_star----------------------------------------------------
     #guide tree -> aligmentreinfolge
     #bei mehr als 2 seq gegeneinander wird ermittelt welche seq den geringsten average uneanlichkeit hat und diese mit
     #der aenlichsten seq aus alig2 aligniert
     #luecken werden nach vorblid des musteraligment in andere aligmen eingefuegt
-    tree_star_msa = open(os.getcwd() + "/results/tree_star_msa_"+ input_file,"w")
-    [tree_star_msa.write(f"#{x}\n") for x in head]
-
     star_list = copy.deepcopy(seq_list)
     for pos in guide_tree:
         seq = [[x] for x in star_list[pos[0]] + star_list[pos[1]]]
@@ -245,19 +192,16 @@ def msa(seq_list,head=head):#["","","",]
         matrix = path_finder_function([star_list[pos[0]][star_guide[0]]], [star_list[pos[1]][star_guide[1]]])
         seq = sequence_function(star_list[pos[0]],star_list[pos[1]],matrix)
         star_list[pos[0]] = seq
-    tree_star_msa.write("\n#ergebniss_star-tree_aligment\n#laengen_check: "+str(set([len(x) for x in star_list[0]]))+"\n#result:\n")
-    [tree_star_msa.write(f"{annotion_find(w)}\t{w}\n") for w in star_list[0]]
-    tree_star_msa.write("//\n")
-    tree_star_msa.close()
-    [check.write(f"{w}\n") for w in star_list[0]]
-    check.write("//\n")
+    print("end star-baum methode: ",star_list)
+    print(set([len(x) for x in star_list[0]]))
+    result.write("\n#ergebniss_star-tree_aligment\n#laengen: "+str(set([len(x) for x in star_list[0]]))+"\n#ergebniss:\n")
+    for w in star_list[0]:
+        result.write(w+"\n")
+    result.write("\n//\n")
 
+    star2_list = copy.deepcopy(seq_list)
     #msa baum methode----------------------------------------------------------
     #wie zuvor nur das bei mehreren seq im aligment jedes aligment nacheinander an die jeweils aenlichste angefuegt wird
-    star2_list = copy.deepcopy(seq_list)
-
-    tree_star_msa2 = open(os.getcwd() + "/results/tree_star_msa2_"+ input_file,"w")
-    [tree_star_msa2.write(f"#{x}\n") for x in head]
     for pos in guide_tree:
         seq_safe = []
         if len(star2_list[pos[0]])<len(star2_list[pos[1]]):
@@ -271,12 +215,13 @@ def msa(seq_list,head=head):#["","","",]
             star2_list[pos[0]] = sequence_function(star2_list[pos[0]],[],matrix)
             del star2_list[pos[1]][star_guide[1]]
         star2_list[pos[0]] += seq_safe
-    tree_star_msa2.write("\n#ergebniss_star-tree2_aligment\n#laengen_check: "+str(set([len(x) for x in star2_list[0]]))+"\nresult:\n")
-    [tree_star_msa2.write(f"{annotion_find(w)}\t{w}\n") for w in star2_list[0]]
-    tree_star_msa2.write("//\n")
-    tree_star_msa2.close()
-    [check.write(f"{w}\n") for w in star2_list[0]]
-    check.write("//\n")
+    print("end star2 methode: ",star2_list[0])
+    print(set([len(x) for x in star2_list[0]]))
+    result.write("\n#ergebniss_star-tree2_aligment\n#laengen: "+str(set([len(x) for x in star2_list[0]]))+"\n#ergebniss:\n")
+    for w in star2_list[0]:
+        result.write(w+"\n")
+    result.write("\n//\n")
+
 
     return seq_list
 
@@ -291,24 +236,24 @@ def msa(seq_list,head=head):#["","","",]
 #test = msa(test)
 
 #130 pfam
-#pfad = "/home/lary/Documents/Studium/4.Semester/problemorientierte_programmierung/beleg2021/PF00545_seed_130_seq.fasta"
-#with open(pfad,"r") as datei:
-#    test = datei.readlines()
+pfad = "/home/lary/Documents/Studium/4.Semester/problemorientierte_programmierung/beleg2021/PF00545_seed_130_seq.fasta"
+with open(pfad,"r") as datei:
+    test = datei.readlines()
 
 #muell
-#test_name,test_seq = [],[]
-#test_vergleich = [x.replace(".","-").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
-#test_seq = [x.replace(".","").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
-#test_name = [x.replace(".","").replace("\n","").replace("/","").split()[0] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
+test_name,test_seq = [],[]
+test_vergleich = [x.replace(".","-").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
+test_seq = [x.replace(".","").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
+test_name = [x.replace(".","").replace("\n","").replace("/","").split()[0] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
 
 
-#print("names: ", len(test_name),test_name)
-#print("seq: ",len(test_seq),test_seq)
-#print(set([len(x) for x in test_seq]))
-#print("vergleich: ", test_vergleich)
-#print(set([len(x) for x in test_vergleich]))
+print("names: ", len(test_name),test_name)
+print("seq: ",len(test_seq),test_seq)
+print(set([len(x) for x in test_seq]))
+print("vergleich: ", test_vergleich)
+print(set([len(x) for x in test_vergleich]))
 
-#test = test_seq
+test = test_seq
 test = msa(test)
 
 
@@ -322,8 +267,7 @@ to do :
     refacctor code -> class, executable 
     output zwischenschritte in file 
     track time
-    np.where(matrix==matrix.max/min()) -> bessere variante coor von val zu finden
 """
 
-check.close()
-#print(align_dic.keys())
+result.close()
+print(align_dic.keys())

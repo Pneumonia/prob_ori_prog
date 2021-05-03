@@ -1,6 +1,6 @@
-#start
-/home/lary/workwork/PycharmProjects/test00/brojekt_biot/file.sto
-#seq_anno: ['seq1', 'seq2', 'seq3', 'seq4', 'seq5', 'seq6', 'seq7', 'seq8']
+#input file Name: file.sto#start: /home/lary/workwork/PycharmProjects/test00/brojekt_biot/file.sto
+#Annotation: ['#test for input', '#anotation', '#anotation']
+#seq_name: ['seq1', 'seq2', 'seq3', 'seq4', 'seq5', 'seq6', 'seq7', 'seq8']
 #seq: ['cccccc', 'abaaaa', 'baaaba', 'abaabb', 'abbbb', 'abbbba', 'aabbaa', 'ababab']
 
 #=guide_tree: [[4, 5], [1, 2], [3, 7], [1, 3], [4, 6], [1, 4], [0, 1]]
