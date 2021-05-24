@@ -4,52 +4,45 @@ import random
 import os as os
 import sys as sys
 
-#safe location
-
+#safe location, variablen input anpassen!
 curr_path = os.getcwd()
-#input anpassen auf variablen input
 in_script = sys.argv[0]
-
+#global pfad input
 global input_file
 input_file = sys.argv[1]
 input_file_pfad = curr_path + "/" + input_file # python3 [msa.py,file.sto]
 
+#read fasta/sto
 with open(input_file_pfad, "r") as datei:
     test = datei.readlines()
+    #print("end: ", test[-1])
+    test = [x for x in test if x != ""]
     test_anno = [x.replace("\n","") for x in test if x.startswith("#")]
-    test_namen=[x.replace("\n","").split()[0] for x in test if x.startswith("#")==False and x.startswith("/")==False]
+    test_namen=[x.replace("\n","").split()[0] for x in test if (x.startswith("#")==False) and (x.startswith("/")==False)]
     test = [x.replace("\n","").replace(".","").split()[1] for x in test if x.startswith("#")==False and x.startswith("/")==False]
     test_namen = dict(zip(test,test_namen))
     datei.close()
 
-
+#head = annotation,
 global head
 head = [input_file,input_file_pfad,test_anno,test_namen,test]
 
-#check
+#
 check_path = curr_path+"/results/" + "msa_check_" + input_file
 check = open(check_path,"w")
 
 [check.write(f"#={x}\n") for x in head]
-
-
-
-
-
-
-
-#print("file: ", __file__)aktuelles file pfad
 #gap cost in bh62 matrix
-global gap_cost
-gap_cost = -4
-global variable_gap_cost
-variable_gap_cost = -1
+global gap_c
+gap_c = -4
+global var_gap_c
+var_gap_c = -1
 
-#safe redumdant aligments
+#redumdante aligments
 global align_dic
 align_dic = {}
 
-# * gap symbol durch - ersetzt
+# * gap symbol durch - ersetzt -4 durch var_gap cost erseten
 b62h={a: i for i,a in enumerate(' A  R  N  D  C  Q  E  G  H  I  L  K  M  F  P  S  T  W  Y  V  B  Z  X  - '.split())}
 b62 = np.array([
 [ 4,-1,-2,-2, 0,-1,-1, 0,-2,-1,-1,-1,-1,-2,-1, 1, 0,-3,-2, 0,-2,-1, 0,-4],
@@ -77,55 +70,58 @@ b62 = np.array([
 [ 0,-1,-1,-1,-2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-2, 0, 0,-2,-1,-1,-1,-1,-1,-4],
 [-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4, 1]])
 #------------------------------------------------------------------------------------------
-#findet ein bestes globales aligment
+#opt globales aligment
 def path_finder_function(align1, align2): #["str1","str2"],["str1","str2"]
     #redumdante aligments
     if str(align1)+str(align2) in align_dic:
         return align_dic[str(align1)+str(align2)]
 
-    #gap und multiple gap cost in eine funktion
+    #gap und multiple gap cost in eine funktion zusammenbringen
+    #erstellt vektor mit alles var_gap und findet opt
     def gap_cost_function(score_matrix):
-        x_axe = [value + gap_cost + variable_gap_cost*(y-i-1) for i,value in enumerate(score_matrix[x][:y])]
-        y_axe = [value + gap_cost + variable_gap_cost*(x-i-1) for i,value in enumerate(np.take(score_matrix,y,axis=1)[:x])]
+        x_axe = [value + gap_c + var_gap_c * (y - i - 1) for i, value in enumerate(score_matrix[x][:y])]
+        y_axe = [value + gap_c + var_gap_c * (x - i - 1) for i, value in enumerate(np.take(score_matrix, y, axis=1)[:x])]
         if max(x_axe) >= max(y_axe):
             score = [max(x_axe),"x_axe", np.argmax(x_axe)+1]
         elif max(x_axe) < max(y_axe):
             score = [max(y_axe),"y_axe", np.argmax(y_axe)+1]
-        return score#(score,weg,count)
-    #score nach match, nach durschnitt prinzip bei mehr als 2 seq
+        return score#(score,weg,leange)
+    #score=durschnitt aller comb
     def match_cost_function(align1,align2,sub_matrix=b62,sub_head=b62h):
-        #2 seq oder viele möglich
         x_basen,y_basen = [seq[x - 1] for seq in align1],[seq[y - 1] for seq in align2]
-        score = sum([sub_matrix[sub_head[x.upper()],sub_head[y.upper()]] if y.upper() in sub_head and x.upper() in sub_head else gap_cost for x in x_basen for y in y_basen ]) / (len(x_basen) * len(y_basen))
+        score = sum([sub_matrix[sub_head[x.upper()],sub_head[y.upper()]] if y.upper() in sub_head and x.upper() in sub_head else gap_c for x in x_basen for y in y_basen]) / (len(x_basen) * len(y_basen))
         return score
-    #matrix für aligment
-    score_matrix = np.zeros((len(align1[0])+1,len(align2[0])+1))#zeros((shape),dtype)
+    #matrix für aligment pfad score
+    pfad_matrix = np.zeros((len(align1[0])+1,len(align2[0])+1))#zeros((shape),dtype)
     #merkt sich ersten, min pfad durch die matrix, [x,y,[gap oder match,leange gap fuer variable gap cost]]
     move_matrix = np.empty((len(align1[0])+1,len(align2[0])+1,2),dtype=object)
-    for x in range(np.shape(score_matrix)[0]):
-        for y in range(np.shape(score_matrix)[1]):
+    for x in range(np.shape(pfad_matrix)[0]):
+        #edge_case
+        for y in range(np.shape(pfad_matrix)[1]):
             if x == 0 and y == 0:
-                score_matrix[0][0] = 0
+                pfad_matrix[0][0] = 0
                 move_matrix[0][0] = ["match",0]
             elif x==0:
-                score_matrix[x][y] = gap_cost + variable_gap_cost * (y-1)
+                pfad_matrix[x][y] = gap_c + var_gap_c * (y - 1)
                 move_matrix[0][y] = ["x_axe",1]
             elif y ==0:
-                score_matrix[x][y] = gap_cost +  variable_gap_cost * (x-1)
+                pfad_matrix[x][y] = gap_c + var_gap_c * (x - 1)
                 move_matrix[x][0] = ["y_axe",1]
             else:
-                score_match = score_matrix[x-1][y-1] + match_cost_function(align1,align2)
-                gap = gap_cost_function(score_matrix)
-                #legalmove_matrix
+                #find best score
+                score_match = pfad_matrix[x-1][y-1] + match_cost_function(align1,align2)
+                gap = gap_cost_function(pfad_matrix)
+                #legalmove_matrix, schaltstelle_pref = gap > match
                 if score_match > gap[0]:
                     move_matrix[x][y] = ["match", 0]
-                    score_matrix[x][y] = score_match
+                    pfad_matrix[x][y] = score_match
                 elif gap[0] >= score_match:
-                    score_matrix[x][y] = gap[0]
+                    pfad_matrix[x][y] = gap[0]
                     move_matrix[x][y] = gap[1:]
-    #folgt weg in move matrix, prorisiert match ueber luecken
+    #matrix wird in jedem schritt verkleinert bis edge
     def traceback_function(move_matrix):  # input=np.array 3d
-        position = []
+
+        position = [] #[(0,1),(1,1),(2,2)...]
         while (np.shape(move_matrix)[0] > 0 and np.shape(move_matrix)[1] > 0):
             if move_matrix[-1][-1][0] == "match":
                 position += [np.shape(move_matrix)[:2]]
@@ -135,19 +131,21 @@ def path_finder_function(align1, align2): #["str1","str2"],["str1","str2"]
                 for _ in range(len(move_matrix[-1]) - move_matrix[-1][-1][1]):
                     position += [np.shape(move_matrix)[:2]]
                     move_matrix = np.delete(move_matrix, (-1), axis=1)
-            elif move_matrix[-1][-1][0] == "y_axe":#zeile
+            elif move_matrix[-1][-1][0] == "y_axe":#zeile,oben
                 for _ in range(len(move_matrix) - move_matrix[-1][-1][1]):
                     position += [np.shape(move_matrix)[:2]]
                     move_matrix = np.delete(move_matrix, (-1), axis=0)
         return position  # [[()],[(),()]]
     #return score_matrix #2d numpy array
     position = traceback_function(move_matrix)
+    #redumdanten align
     align_dic[str(align1)+str(align2)] = position
     #check
     check.write(f"#align1: {align1}, align2: {align2} : {position}\n")
-    return position
+    return position#[(),()]
 
 #min score, luecken sind zaelen als +1
+#uneanlichkeitsscore
 def score_function(seq1,seq2):
     score = sum([0 if x == y and x !="-" else 1 for x,y in zip(seq1,seq2)])
     check.write(f"#seq1,seq2: {seq1} : {seq2}, score: {score}\n")
@@ -160,7 +158,7 @@ def sequence_function(seq1,seq2,pfad):#-2 weil shape verwendet und index #[[""],
     new_seq1 = ["".join(["-" if pfad[::-1][i][0] == pos[0] else s1[pos[0]-2] for i,pos in enumerate(pfad[-2::-1])]) for s1 in seq1]
     new_seq2 = ["".join(["-" if pfad[::-1][i][1] == pos[1] else s2[pos[1]-2] for i,pos in enumerate(pfad[-2::-1])]) for s2 in seq2]
     check.write(f"#seq1,seq2: {seq1} {seq2}, pfad: {pfad}, aligment: {new_seq1} {new_seq2}\n")
-    return new_seq1 + new_seq2
+    return new_seq1 + new_seq2 #["","",""]
 #-------------------------------------------------------------------------------------------------------------------------
 #erzeugt guide tree
 def guide_tree_function(score_matrix):
@@ -175,7 +173,7 @@ def guide_tree_function(score_matrix):
         score_matrix = np.delete(score_matrix,min_d[1],axis=0)
         score_matrix = np.delete(score_matrix,min_d[1],axis=1)
         score_matrix[min_d[0]][min_d[0]] = 0
-    return guide_t#output [(paar1),[(),[()]]], seq_liste die mit verkleinert wird?
+    return guide_t #output [(paar1),[(),[()]]], seq_liste die mit verkleinert wird?
 #---------------------------------------------------------------------------------------------------------------
 #findet fuer seq die mit min uneanlichkeit und zu dieser die uneanlichste seq
 def close_bransh_finder(score_matrix,offset=0):
@@ -255,71 +253,7 @@ def msa(seq_list,head=head):#["","","",]
     [check.write(f"{w}\n") for w in star_list[0]]
     check.write("//\n")
 
-    #msa baum methode----------------------------------------------------------
-    #wie zuvor nur das bei mehreren seq im aligment jedes aligment nacheinander an die jeweils aenlichste angefuegt wird
-    star2_list = copy.deepcopy(seq_list)
-
-    tree_star_msa2 = open(os.getcwd() + "/results/tree_star_msa2_"+ input_file,"w")
-    tree_star_msa2.write("# STOCKHOLM 1.0\n")
-    #[tree_star_msa2.write(f"#={x}\n") for x in head]
-    for pos in guide_tree:
-        seq_safe = []
-        if len(star2_list[pos[0]])<len(star2_list[pos[1]]):
-            star2_list[pos[0]],star2_list[pos[1]] = star2_list[pos[1]],star2_list[pos[0]]
-        for x in range(len(star2_list[pos[1]])):
-            seq = [[x] for x in star2_list[pos[0]] + star2_list[pos[1]]]
-            score_matrix = score_matrix_function(seq)
-            star_guide = close_bransh_finder(score_matrix,offset=len(star2_list[pos[1]]))
-            matrix = path_finder_function([star2_list[pos[0]][star_guide[0]]], [star2_list[pos[1]][star_guide[1]]])
-            seq_safe = sequence_function(seq_safe,[star2_list[pos[1]][star_guide[1]]],matrix) #[len(star2_list[pos[0]][star_guide[0]]):]
-            star2_list[pos[0]] = sequence_function(star2_list[pos[0]],[],matrix)
-            del star2_list[pos[1]][star_guide[1]]
-        star2_list[pos[0]] += seq_safe
-    #tree_star_msa2.write("#=ergebniss_star-tree2_aligment\n#=laengen_check: "+str(set([len(x) for x in star2_list[0]]))+"\n#=result:\n")
-    [tree_star_msa2.write(f"{annotion_find(w)}\t{w}\n") for w in star2_list[0]]
-    tree_star_msa2.write("//\n")
-    tree_star_msa2.close()
-    [check.write(f"{w}\n") for w in star2_list[0]]
-    check.write("//\n")
-
-    return seq_list
-
-#------------------------------------------------------------------------------------------------------------------
-
-#test seq zum nachrechnen
-#test = ["".join([chr(random.randint(65,85)) for _ in range(10)]) for _ in range(50)]
-#test = ["cccccc","abaaaa","baaaba","abaabb","babbbb","abbbba","aabbaa","ababab"]
-#test = ["aaaa","aaab","aabb","bbbb","bbba","bbaa"]
-#test = ["aaaab","abbbb"]
-
-#test = msa(test)
-
-#130 pfam
-#pfad = "/home/lary/Documents/Studium/4.Semester/problemorientierte_programmierung/beleg2021/PF00545_seed_130_seq.fasta"
-#with open(pfad,"r") as datei:
-#    test = datei.readlines()
-
-#muell
-#test_name,test_seq = [],[]
-#test_vergleich = [x.replace(".","-").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
-#test_seq = [x.replace(".","").replace("\n","").replace("/","").split()[1] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
-#test_name = [x.replace(".","").replace("\n","").replace("/","").split()[0] for x in test if "#" not in x and len(x.replace(".","").replace("\n","").replace("/",""))>0]
-
-
-#print("names: ", len(test_name),test_name)
-#print("seq: ",len(test_seq),test_seq)
-#print(set([len(x) for x in test_seq]))
-#print("vergleich: ", test_vergleich)
-#print(set([len(x) for x in test_vergleich]))
-
-#test = test_seq
-test = msa(test)
-
-
-
-
-
-#-------------------------------------
+    return None
 """
 to do :
     -in blosum62 die gap costen variable machen
@@ -328,6 +262,5 @@ to do :
     track time
     np.where(matrix==matrix.max/min()) -> bessere variante coor von val zu finden
 """
-
 check.close()
 #print(align_dic.keys())
